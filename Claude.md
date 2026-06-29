@@ -86,13 +86,21 @@ Within scr: `P_δ = P_δN` (confirmed 0.000%), because scr's T⁰₀ projection 
 
 ## What Needs to Be Done
 
-### Before Rerunning (immediate)
-1. **Fix convergence formula** in the ray-tracing post-processing code:
-   - Current (wrong): `κ = 1 - √(|g|² + 1/μ)`
-   - Correct (exact): `κ = 1 - 1/√(μ(1-|g|²))`
-   - This is a sub-percent correction in the weak-lensing regime but must be fixed for rigor before rerunning to avoid a second full rerun.
-   
-2. **Decide on |g| vs |γ| notation:** Reviewer 3 (point 4b) asks to use `g`. If adopted, notation must be updated consistently throughout manuscript. (Currently undecided.)
+### Before Rerunning (immediate) — DONE (2026-06-30)
+1. ~~**Fix convergence formula** in the ray-tracing post-processing code~~ **FIXED**
+   - Was wrong: `κ = 1 - √(|g|² + 1/μ)` (valid only for true shear γ, not reduced shear g)
+   - Now correct: `κ = 1 - 1/√(μ(1-|g|²))` (exact relation from the Jacobian: det A = μ⁻¹, A = (1-κ)I - Γ, |g|=|Γ|/(1-κ))
+   - Fixed in: `/mnt/d/coding/raytracing/template_fitting_py.txt` line 325
+
+2. ~~**Fix snapshot loading bug in ray-tracing job template**~~ **FIXED**
+   - Old code: 6 snapshot files (snap000=z0.55 → snap005=z0.0); only 6 of 11 potential slots loaded; snap6–10 = zeros
+   - Old branch `elif 0.55 <= redshift < 0.66` used snap6 (zeros) with wrong `z_1=0.66` — catastrophically wrong for z_s=0.6
+   - New code: 7 snapshot files (snap006=z0.0 → snap000=z0.60), `potential=(7,...)`, snap0–snap6 all correctly loaded
+   - Fixed branch: `elif 0.55 <= redshift <= 0.60`, `z_1=0.60`, correctly interpolates snap5(z=0.55)↔snap6(z=0.60)
+   - Dead branches for z > 0.60 replaced by minimal `else` using snap6 constant (unreachable for z_s ≤ 0.6)
+   - Fixed in: `/mnt/d/coding/raytracing/template_job_py.txt`
+
+3. **Decide on |g| vs |γ| notation:** Reviewer 3 (point 4b) asks to use `g`. If adopted, notation must be updated consistently throughout manuscript. (Currently undecided.)
 
 ### Computation (the long part, ~2 weeks)
 3. **Rerun all 21 paired simulations** with matched settings (`T_cmb=0`, `N_ur=0`) in both gev and scr.
@@ -135,3 +143,50 @@ With matched settings, the genuine perturbation-level difference between gev and
 - HEALPix maps at N_side=128 (196,608 pixels, ~0.46° resolution)
 - ℓ_max = 128 for APS
 - Cosmology: Planck 2018 (h=0.67556, Ω_CDM=0.2638, etc.)
+
+### Linux Simulation Server
+- SSH: `ju@ju-astro` or `ju@103.159.2.161`, password: `@astrophysics`
+- Server user: `ju` → `$HOME = /home/ju/`
+
+**Directory layout on server:**
+```
+/home/ju/
+├── gevolution/             # code repo + compiled binary ./gevolution
+│   └── settings/           # custom_settings.ini + settings_01.ini (generated per run)
+├── screening/              # code repo; binary also named ./gevolution
+│   └── settings/
+├── fuad-scripts/astro/     # fish helpers: astro.fish, read-seed.py, read-settings.py, ...
+└── ssd-ext/
+    ├── gevolution-phi/
+    │   ├── outputs/output_01/ … output_21/   # lcdm_snap000_phi.h5 … snap006_phi.h5 + cdm Gadget2
+    │   ├── rockstar-outputs/output_01/ …
+    │   └── revolver-outputs/output_01/ …
+    └── screening-phi/      # same structure
+```
+
+**Run command:** `mpirun -np 16 ./gevolution -n 4 -m 4 -s settings/settings_$i.ini` (16 MPI = 4 nodes × 4 procs)
+
+**Fish helper functions** (local: `my-scripts/astro/astro-server.fish` = server: `~/fuad-scripts/astro/astro.fish`):
+- `create_settings_seed g|s START END` — copies custom_settings.ini → settings_NN.ini, injects seed + output path
+- `run_simulation g|s START END` — generates settings + runs mpirun for each index
+- `run_gevolution START END` / `run_screening START END` — run only (settings must exist)
+- Usage from code dir: `cd ~/gevolution && create_settings_seed g 1 5 && run_gevolution 1 5`
+
+**Seeds (21 total):** `42 413 360 444 124 955 266 62 846 935 845 908 537 827 317 109 861 785 415 956 470`
+- First 5 for initial comparison: 42, 413, 360, 444, 124 → output_01 through output_05
+
+**Settings files** (updated 2026-06-30 with `T_cmb=0`, `N_ur=0`, 7 snapshots):
+- gevolution: `/home/rafi/github/gevolution/settings/custom_settings.ini` (sync to `~/gevolution/settings/`)
+- screening: `/home/rafi/github/screening/settings/custom_settings.ini` (sync to `~/screening/settings/`)
+- `snapshot_redshifts = 0.6, 0.55, 0.44, 0.33, 0.22, 0.11, 0` → snap000=z0.60 … snap006=z0.00
+
+### Ray-Tracing Pipeline (local templates at `/mnt/d/coding/raytracing/`)
+- `template_job_py.txt` — 3D-RBT geodesic tracer; reads snapshot .h5 files, integrates null geodesics
+- `template_fitting_py.txt` — ellipse fit → μ, |g| (reduced shear), κ; outputs `.npy` maps
+- `generate_scripts_for_sets.sh` — run `./generate_scripts_for_sets.sh 1 2 3 4 5` from raytracing dir
+  - Creates `set1/`, `set2/`, … with 8 job scripts + 1 `run_fitting.py` per set
+  - Substitutes: `#OUTPUT_DIR#` → `output_01`, `#JOB_NUM#` → 1–8, `#SET_NUM#` → 01–05
+  - `_SIM_TYPE_` in job filenames is replaced by a separate deployment script (not in repo)
+- 8 MPI jobs × geodesics per job; HEALPix N_side=128 (196,608 pixels); integration `u = np.linspace(0, -1230, 1000)`
+- Snapshot reads: `filenames[0]` = snap006 (z=0.0) → `interpolator_phi_snap0` … `filenames[6]` = snap000 (z=0.60) → `interpolator_phi_snap6`
+- Output `.npy` files: `final_outputs/mu_#SIM_TYPE#_#SET_NUM#.npy`, `gamma_…`, `k_…`

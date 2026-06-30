@@ -190,3 +190,33 @@ With matched settings, the genuine perturbation-level difference between gev and
 - 8 MPI jobs × geodesics per job; HEALPix N_side=128 (196,608 pixels); integration `u = np.linspace(0, -1230, 1000)`
 - Snapshot reads: `filenames[0]` = snap006 (z=0.0) → `interpolator_phi_snap0` … `filenames[6]` = snap000 (z=0.60) → `interpolator_phi_snap6`
 - Output `.npy` files: `final_outputs/mu_#SIM_TYPE#_#SET_NUM#.npy`, `gamma_…`, `k_…`
+
+---
+
+## Codebase Compilation for Claude Web Upload
+
+Run from the repo root (`~/gevolution` or `~/screening`) in fish to produce a
+single text file suitable for uploading to Claude web.
+
+Use `custom_settings.ini` for production runs (the active simulation settings);
+use `diag_settings.ini` only for diagnostic/debug uploads.
+
+```fish
+# gevolution
+echo "=== GEVOLUTION REPO COMPILATION ===" > combined_codebase_gev.txt
+for file in settings/custom_settings.ini main.cpp gevolution.hpp background.hpp
+    echo -e "\n====================================================================\nFILE: $file\n====================================================================\n" >> combined_codebase_gev.txt
+    cat $file >> combined_codebase_gev.txt
+end
+```
+
+```fish
+# screening (run from ~/screening)
+echo "=== SCREENING REPO COMPILATION ===" > combined_codebase_scr.txt
+for file in settings/custom_settings.ini main.cpp gevolution.hpp background.hpp
+    echo -e "\n====================================================================\nFILE: $file\n====================================================================\n" >> combined_codebase_scr.txt
+    cat $file >> combined_codebase_scr.txt
+end
+```
+
+Output files: `~/gevolution/combined_codebase_gev.txt` and `~/screening/combined_codebase_scr.txt`.

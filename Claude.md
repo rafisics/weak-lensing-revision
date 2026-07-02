@@ -87,6 +87,14 @@ Within scr: `P_δ = P_δN` (confirmed 0.000%), because scr's T⁰₀ projection 
 ## What Needs to Be Done
 
 ### Before Rerunning (immediate) — DONE (2026-06-30)
+0. ~~**Update to correct Planck 2018 parameters**~~ **DONE (2026-07-03)**
+   - Old parameters were Planck 2013 (A_s=2.215e-9); now updated to Planck 2018 matching Eingorn et al. (2022) exactly
+   - Updated files: gevolution/screening custom_settings.ini + diag_settings.ini (h, omega_b, omega_cdm, A_s, n_s)
+   - Updated Python: template_job_py.txt, doppler-convergence.py, halo-doppler-convergence.py (wm, wd, H0)
+   - Raytracing repo: only template_job_py.txt had cosmological params (all others clean)
+   - Manuscript line 146: values updated + wrapped in \red{}; N_eff removed (T_cmb=0, N_ur=0 in both codes)
+   - `\cite{aghanim2020}` citation is now correct
+
 1. ~~**Fix convergence formula** in the ray-tracing post-processing code~~ **FIXED**
    - Was wrong: `κ = 1 - √(|g|² + 1/μ)` (valid only for true shear γ, not reduced shear g)
    - Now correct: `κ = 1 - 1/√(μ(1-|g|²))` (exact relation from the Jacobian: det A = μ⁻¹, A = (1-κ)I - Γ, |g|=|Γ|/(1-κ))
@@ -142,7 +150,7 @@ With matched settings, the genuine perturbation-level difference between gev and
 - Source redshifts: z_s = 0.05, 0.2, 0.4, 0.6
 - HEALPix maps at N_side=128 (196,608 pixels, ~0.46° resolution)
 - ℓ_max = 128 for APS
-- Cosmology: Planck 2018 (h=0.67556, Ω_CDM=0.2638, etc.)
+- Cosmology: **Planck 2018** (h=0.6766, omega_b=0.02242, omega_cdm=0.11933, A_s=2.105e-9, n_s=0.9665) — matching Eingorn et al. (2022) exactly; T_cmb=0, N_ur=0 in both codes (radiation excluded)
 
 ### Linux Simulation Server
 - SSH: `ju@ju-astro` or `ju@103.159.2.161`, password: `@astrophysics`
@@ -190,6 +198,69 @@ With matched settings, the genuine perturbation-level difference between gev and
 - 8 MPI jobs × geodesics per job; HEALPix N_side=128 (196,608 pixels); integration `u = np.linspace(0, -1230, 1000)`
 - Snapshot reads: `filenames[0]` = snap006 (z=0.0) → `interpolator_phi_snap0` … `filenames[6]` = snap000 (z=0.60) → `interpolator_phi_snap6`
 - Output `.npy` files: `final_outputs/mu_#SIM_TYPE#_#SET_NUM#.npy`, `gamma_…`, `k_…`
+
+---
+
+---
+
+## Physics Letters B — Doppler Lensing Paper (Address After Weak Lensing Revision)
+
+The published Doppler lensing paper (Physics Letters B) has the same cosmological parameter citation issue identified in the weak lensing revision:
+- Paper cites "Planck 2018" (`\cite{aghanim2020}` or equivalent) but lists Planck 2013 values (A_s=2.215e-9, n_s=0.9619, h=0.67556)
+- Analysis code (doppler-convergence.py) used wm=0.312046079, wd=0.687953921 — also Planck 2013
+
+**This is likely NOT a scientific erratum** — simulations and analysis were internally self-consistent with Planck 2013. Results are physically valid.
+
+**Findings (verified 2026-07-03):**
+
+1. **chi_s=1536 Mpc/h**: Correct Planck 2013 value is 1538.07 Mpc/h; Planck 2018 gives 1539.55 Mpc/h. The 1536 value is off by ~2 Mpc/h (~0.13%) — negligible, likely a rounded estimate. Not a scientific concern.
+
+2. **T_cmb/N_ur mismatch**: CONFIRMED present in Doppler paper simulations (same old gevolution settings). From weak lensing diagnostics: mismatch caused +3.47% in P_Φ and +3.48% in P_δ at z=0. Halo velocities are driven by gravitational potential, so a similar artifact likely affected the published gev vs scr Doppler convergence comparison. This may require an **Erratum** (not just corrigendum) if the main gev/scr result is materially affected.
+
+3. **Citation mislabeling** (Planck 2018 cited but Planck 2013 values used): minor, publisher's corrigendum sufficient on its own.
+
+**Options for correcting published work (Physics Letters B / Elsevier):**
+- **Erratum**: corrects factual errors (wrong results from code/settings error) — published as a linked notice, original paper remains. Appropriate if T_cmb/N_ur mismatch materially changed gev/scr comparison.
+- **Corrigendum**: author-initiated correction, same process. Appropriate for citation mislabeling alone.
+- **Retraction**: only for fundamental invalidity or fraud — not appropriate here.
+
+**Action when returning to this:**
+- Rerun Doppler lensing simulations with T_cmb=0, N_ur=0 in both codes and Planck 2018 parameters
+- Compare new vs old results; if gev/scr difference changes significantly → submit Erratum to Physics Letters B
+- If difference is negligible → corrigendum for citation label only
+
+---
+
+## Manuscript Cross-Check Findings (2026-07-03)
+
+Cross-checked: `main-v.3.0.tex`, `response-for-main-v.3.0.tex`, gevolution and screening `custom_settings.ini`.
+
+### Settings — Clean
+Both settings files are consistent and correct: `T_cmb=0`, `N_ur=0`, 7 snapshots, boxsize=320 Mpc/h, Ngrid=256. No issues.
+
+### Fix before rerun (no rerun needed)
+
+**Planck citation wrong (line 146):** `\cite{aghanim2020}` must be changed to Planck 2013 (Ade et al. 2014, arXiv:1303.5076). A_s=2.215e-9 is definitively Planck 2013 — Planck 2018 gives A_s≈2.101e-9 (~5% lower). n_s=0.9619 and N_eff=3.046 also match 2013, not 2018.
+
+### Fix after rerun (manuscript + response will be fully rewritten)
+
+| Issue | Location | Note |
+|-------|----------|------|
+| ~5% result presented as real | Abstract, Results, Conclusions | Pre-fix artifact; entire narrative changes after rerun |
+| T_cmb/N_ur fix not in manuscript body | Nowhere | Must be added to methodology section |
+| 23 `\red{}` + 9 `\blue{}` draft markers | Throughout | All must be resolved |
+| κ formula blue editorial block | Lines 178–182 | Exposes wrong code; remove after rerun confirms formula |
+| \|g\| vs \|γ\| notation unresolved | Throughout | Decision pending |
+| Source redshifts z_s=0.05,0.2,0.4 not exact snapshots | Line 189 | Say "reached by interpolation", not "corresponding snapshots" |
+| 4 missing citations | Lines 148, 166, 530, 532 | + raw GitHub URL at line 152 |
+| Editor comment response | Response line 189 | `\details` — empty |
+| Reviewer 3 final comment | Response line 1702 | `\details` — empty |
+| Reviewer 1 Major 1a–1d, Major 2 | Response lines 228–267 | "will touch on later" — all deferred |
+
+### Complete items in response
+- Root-cause investigation (T_cmb/N_ur, diagnostic cases) — fully documented
+- Reviewer 2 — fully complete
+- Reviewer 3 sub-comments 2, 3, 4a–d, 5a–b — substantive responses written
 
 ---
 

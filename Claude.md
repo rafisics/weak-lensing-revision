@@ -114,6 +114,17 @@ Within scr: `P_δ = P_δN` (confirmed 0.000%), because scr's T⁰₀ projection 
 3. **Rerun all 21 paired simulations** with matched settings (`T_cmb=0`, `N_ur=0`) in both gev and scr.
 4. **Rerun the full 3D-RBT ray-tracing pipeline** with corrected κ formula to regenerate all maps, PDFs, APS figures.
 
+**Current status (as of 2026-07-07):** Running 5 paired realizations (reduced from 21 due to time constraint). Gev ray-tracing started July 7. Sequential execution required — server RAM (125 GB) prevents parallel sets (each set uses ~75 GB). Storage also prevents gev and scr running concurrently (5 sets × 124 GB = 620 GB each; server has 981 GB total).
+
+**Revised timeline:**
+- ~July 23: gevolution ray-tracing + fitting complete
+- ~July 24: transfer gev final outputs to local, delete raw files (595 GB) to free server storage
+- ~Aug 9: screening ray-tracing + fitting complete
+- Aug 10–15: revision writing (~6 days available)
+- **Aug 15: submission deadline**
+
+Manuscript analysis (2026-07-07): ~60-65% structurally written; all specific numerical results must be replaced. Response letter: ~17-18 reviewer items, ~9 complete, ~5 placeholder (`\details`), ~4 contingent on new numbers. Estimated writing after results: 3–4 days focused work — August 15 is feasible but tight.
+
 ### After Rerun — Manuscript and Response Updates
 5. Update all numerical results (the ~5% numbers will change — expected to become a small genuine physical signal ~0.02% or a new, correctly-measured comparison).
 6. Write actual responses for items currently marked `\details` or "will touch on it later":
